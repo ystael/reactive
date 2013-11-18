@@ -36,6 +36,10 @@ abstract class CircuitSimulator extends Simulator {
     }
   }
 
+  def connect(input: Wire, output: Wire) {
+    input.addAction(() => { output.setSignal(input.getSignal) })
+  }
+
   def inverter(input: Wire, output: Wire) {
     def invertAction() {
       val inputSig = input.getSignal
@@ -58,16 +62,41 @@ abstract class CircuitSimulator extends Simulator {
   // to complete with orGates and demux...
   //
 
-  def orGate(a1: Wire, a2: Wire, output: Wire) {
-    ???
+  def orGate(o1: Wire, o2: Wire, output: Wire) {
+    def orAction() {
+      val o1Sig = o1.getSignal
+      val o2Sig = o2.getSignal
+      afterDelay(OrGateDelay) { output.setSignal(o1Sig || o2Sig) }
+    }
+    o1.addAction(orAction)
+    o2.addAction(orAction)
   }
   
-  def orGate2(a1: Wire, a2: Wire, output: Wire) {
-    ???
+  def orGate2(o1: Wire, o2: Wire, output: Wire) {
+    val no1, no2, ao = new Wire
+    inverter(o1, no1)
+    inverter(o2, no2)
+    andGate(no1, no2, ao)
+    inverter(ao, output)
   }
 
   def demux(in: Wire, c: List[Wire], out: List[Wire]) {
-    ???
+    c match {
+      case List()    => out match {
+        case o::Nil => connect(in, o)
+        case _      => throw new IllegalArgumentException("demux with no control must have exactly one out")
+      }
+      case con::cons => {
+        val outs1 = out.take(out.length / 2)
+        val outs0 = out.drop(out.length / 2)
+        val in1, in0, negcon = new Wire
+        andGate(in, con, in1)
+        inverter(con, negcon)
+        andGate(in, negcon, in0)
+        demux(in1, cons, outs1)
+        demux(in0, cons, outs0)
+      }
+    }
   }
 
 }
