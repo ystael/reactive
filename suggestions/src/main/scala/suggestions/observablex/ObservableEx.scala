@@ -28,4 +28,10 @@ object ObservableEx {
     Observable(channel.subscribe(_))
   }
 
+  def from[T](seq: Iterable[T]): Observable[T] = Observable(observer => {
+    seq foreach (s => observer.onNext(s))
+    observer.onCompleted()
+    Subscription {}
+  })
+
 }
